@@ -1,0 +1,206 @@
+매우 중요한 사항
+
+하나씩 뜯어보자 
+
+"question_list.html" 에서 질문하기 버튼을 누르면 그 값이 ulrs.py 에 들어가고 그곳에 있는 views.question_create 함수 값을 불러오게 된다. "a 태그" 는 특별하게 method 값을 지정해주지 않으면 전달방식이 무조건 get 방식을 취하게 된다. 그래서 "question_create 함수" 에서 나오는 값은
+ form = QuestionForm() 이라는 값이 생기게 된다.
+ context = {'form':form} 다시 재할당을 해주고
+ return render(request, 'pybo/question_form.html', context) 'pybo/question_form.html' 값을 만들어 주게 된다.
+
+"pybo/question_form.html" 
+
+Ex)
+{% extends 'base.html' %}
+{% block content %}
+<div class = "container">
+  <h5 class="my-3 border-bottom pb-2">질문등록</h5>
+  <form method="post">
+    {% csrf_token %}
+<div class="mb-3">
+        <label for="subject" class="form-label">제목</label>
+        <input type="text" class="form-control" name="subject" id="subject"
+               value="{{ form.subject.value|default_if_none:'' }}">
+    </div>
+    <div class="mb-3">
+        <label for="content" class="form-label">내용</label>
+        <textarea class="form-control" name="content"
+                  id="content" rows="10">{{ form.content.value|default_if_none:'' }}</textarea>
+    </div>
+  <button type="submit" class="btn btn-primary">저장하기</button>
+  </form>
+</div>
+{% endblock content %}
+
+오류 영역은 잠깐 빼고 살펴본다면, html, css 와 관련된 내용은 전부 배재한 채로 하나씩 살펴볼 때
+
+Ex)
+<label for="subject" class="form-label">제목</label>
+        <input type="text" class="form-control" name="subject" id="subject"
+               value="{{ form.subject.value|default_if_none:'' }}">
+
+label for = "subject" 이 속성은 id와 같으면 연결된다. 그렇기 때문에, input id = "subject" 와 연결되어 있다는 말이다.
+
+label class = "form-label" 이 값은 단순히 bootstrap 에서 사용하는 css 클래스이다.
+
+input class = "form-control" 마찬가지로 bootstrap 에서 사용하는 css 클래스이다.
+
+제목(subject) 항목의 value = {{ form.subject.value|default_if_none:'' }} 처럼 값을 대입해 주었는데 이것은 오류가 발생했을 경우 기존에 입력했던 값을 유지하기 위함이다.
+|default_if_none:''의 의미는 폼 데이터(form.subject.value)에 값이 없을 경우 None 이라는 문자열이 표시되는데 None 대신 공백으로 표시하라는 의미의 템플릿 필터이다.
+
+
+
+이제 여기서 공백으로 파일을 넘길 경우 오류가 발생을 하는데 그 오류가 발생했을 시에 발생하는 값들이다.
+
+Ex)
+        <!-- 오류표시 Start -->
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+            {% for field in form %}
+            {% if field.errors %}
+            <div>
+                <strong>{{ field.label }}</strong>
+                {{ field.errors }}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <!-- 오류표시 End -->
+
+공백으로 넘기면 오류가 발생하는 이유에 대해서 설명하기 이전에 알아야 하는 설명이 있다.
+
+저장하기 버튼을 누르게 되면 다시 리로드되면서 url 에 따라서 홈페이지가 찾아가는 곳이 urls.py 이다. 그리고 그곳에서 
+views.question_create 함수를 다시 실행하는데, 처음 question_list.html 파일에서 만들 때에는 "a 태그" 를 사용했기 때문에 get 방식으로 넘어가서 question_form.html 파일을 랜더링 했지만, question_form.html 파일이 만들어 질 때 form 태그의 method가 post 형식으로 만들어 졌다. 따라서 저장하기 버튼을 누르면 post 방식으로 views.question_create 함수가 실행이 되고, POST 방식을 사용했기 때문에, 이 값들이 실행되게 된다.
+
+Ex)
+if request.method == 'POST':
+    form = QuestionForm(request.POST)
+    if form.is_valid():
+      question = form.save(commit=False)
+      question.create_date = timezone.now()
+      question.save()
+      return redirect('pybo:index')
+
+그래서 이 값들이 들어갈 때 오류가 발생을 하는 것인데, 오류가 나는 이유는 아무런 전달값도 없이 QuestionForm(request.POST) 에 대한 값으로 forms.py 에 전달 받아도 아무값도 찾을 수 없으며, 
+
+if form.is_valid(): 에 값이 들어가면서 form 에 대한 값으로 공백이 들어가면서 유효하지 못하고, 이 함수가 False 를 반환한다. 그에 따라 에러가 발생하고, 밑에 있는 
+
+Ex)
+  form = QuestionForm()
+  context = {'form':form}
+  return render(request, 'pybo/question_form.html', context)
+
+가 다시 실행되며, 페이지가 다시 리로딩되는데, 단순히 위에 오류 표시가 새로 생기는 것처럼 보이는 이유는 이미 전달받은 데이터 값, 캐시값이 존재하기 때문이다.
+
+그래서 그 오류값과 함께 반환된 페이지가 다시 만들어지는 것이다.
+
+if form.errors  가 발생하게 된다.
+
+Ex)
+  <!-- 오류표시 Start -->
+          {% if form.errors %}
+          <div class="alert alert-danger" role="alert">
+              {% for field in form %}
+              {% if field.errors %}
+              <div>
+                  <strong>{{ field.label }}</strong>
+                  {{ field.errors }}
+              </div>
+              {% endif %}
+              {% endfor %}
+          </div>
+          {% endif %}
+          <!-- 오류표시 End -->
+
+Ex)
+  class QuestionForm(forms.ModelForm):
+    class Meta:
+      model = Question # 사용할 모델
+      fields = ['subject', 'content'] # QuestionForm에서 사용할 Qeustion 모델의 속성
+      widgets = {
+        'subject': forms.TextInput(attrs={'class':'form-control'}),
+        'content': forms.TextInput(attrs={'class':'form-control', 'row': 15})
+      }
+      labels = {
+        'subject' : '제목 ',
+        'content' : '내용 ',
+      }
+      
+if form.errors 란 즉 사용자가 제대로 된 값을 전달하지 않아서 웹페이지 사이트가 리로딩되면서 화면에 뜨는 css값이라고 할 수 있다.
+
+그래서 여기서 form 값은 QuestionForm() 값에 정의된 값에서 데이터가 나오게 된다.
+
+위에 있는 html 파일을 하나씩 뜯어보면 
+
+
+{% if form.errors %} 
+
+만약에 form 이 에러가 있다면
+
+여기서 form 은 question_create 함수에 들어가면서 만들어지고 리턴 받은 값을 뜻한다.
+
+<div class="alert alert-danger" role="alert">
+
+이 값은 bootstrap 에서 찾을 수 있는 값으로 빨간색 색깔의 화면을 표시해준다.
+
+{% for field in form %}
+
+form 에 저장되어 있는 값들을 field 라는 변수에 넣어주면서 밑에 있는 값들을 실행해주는 반복문이다.
+
+{% if field.errors %}
+
+form 에 있는 값들에 따라 그 값이 공백으로 저장되었다면 에러가 발생한 것으로 가정한다. 그리고 field 에 들어온 form 값이 에러가 참이라면 밑에 있는 구문들이 실행이 되면서 위와 같은 값들이 출력이 된다.
+
+<strong>{{ field.label }}</strong>
+
+여기에 나와있는 label 의 값은 question_create 함수에 들어갈 때 form = QuestionForm() 에 들어가면서 가졌던 labels 의 값을 받아와서 출력이 된다.
+
+{{ field.errors }}
+
+이도 위와 마찬가지 이다.
+
+
+
+
+여기서 생각해봐야 하는 점은 
+
+{% if field.errors %} 이 구문이다.
+
+위에서 이미 {% if form.errors %} 라는 값을 주고 {% for field in form %} 라는 값으로 errors 구문을 실행하면 되는데 반복문을 할 때 넣은 값을 다시 if 문으로 field 의 에러값을 구하는 이유가 있다.
+
+Ex)
+          {% if form.errors %}
+          <div class="alert alert-danger" role="alert">
+              {% for field in form %}
+              <div>
+                  <strong>{{ field.label }}</strong>
+                  {{ field.errors }}
+              </div>
+              {% endfor %}
+
+"제목에만 값을 넣지않고 저장하기를 눌렀을 시 "
+Ex)
+제목
+필수 항목입니다.
+내용
+
+if 문이 없이 저장하기로 값을 전달하게 되면 다음과 같은 오류가 발생한다. 그 이유는
+
+question_create 함수에 들어갈 때 "제목"에 들어가는 "오류값" 하나와 "내용"에 들어가는 "참인값" 총 2개가 만들어지게 되고, form 에는 값이 2개가 되게 된다. 
+
+둘 중에 하나만 오류가 발생해도 form.errors 가 발생하게 되는데, 그 값에 따라 for 문이 실행되어 지게 되었다.
+
+그에 따라 오류가 발생하며 field.errors 구문이 자연스럽게 작성이 되지만, label 에 대한 값은 오류가 없어도 출력이 되기 때문에, 원하지 않던 값을 받게 된다
+
+form = QuestionForm() 의 값으로 들어갔을 때
+
+"제목과 내용 모두 없다는 가정으로"
+
+form 의 배열값은 form = ['subject', 'content'] 이다.
+
+  class Meta:
+    model = Question # 사용할 모델
+    fields = ['subject', 'content']
+
+
+이에 따라 반복문에 들어가는 field 값 또한 1번 과 2번이 나누어서 들어가고 각각 찾아지는 값들이 달라지게 된다. 

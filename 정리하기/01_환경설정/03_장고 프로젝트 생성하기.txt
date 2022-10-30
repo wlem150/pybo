@@ -1,0 +1,63 @@
+/ 03_장고를 활용해서 프로젝트 만들기 /
+
+장고에서는 프로젝트라는 개념이 있으며, 장고의 프로젝트는 하나의 웹 사이트라고 생각하면 된다. 즉, 장고프로젝트를 생성하면 한 개의 웹사이트를 생성하는 것과 같다.
+
+하나의 프로젝트안에는 여러가지 앱들이 존재하며, 이 앱들이 모여서 웹사이트를 구성한다. 
+
+
+/ 프로젝트 생성하기 /
+
+1. 먼저 원하는 위치에 프로젝트 폴더를 만든다.
+2. 만들어진 폴더안에서 가상환경에 진입한다.
+3. 프로젝트 폴더안에 본인이 만들 사이트의 폴더를 만든다.
+4. 장고의 명령어를 통해서 그 폴더에서 장고의 프로젝트를 실행한다.
+
+
+/ -- 1. 원하는 위치에 프로젝트 폴더를 만든다. / 
+
+Ex) 
+  C:\>mkdir projects
+  C:\>cd projects
+  C:\projects>
+
+프로젝트 폴더를 만들어서 안에 진입하자
+
+
+/ -- 2. 가상환경에서 프로젝트 폴더로 이동하자 /
+
+Ex)
+  c:\venvs\mysite\Scripts>activate
+  (mysite) c:\venvs\mysite\Scripts>cd c:\projects
+  (mysite) c:\projects
+  
+
+or)
+  C:\projects>C:\venvs\mysite\Scripts\activate
+  (mysite) C:\projects>
+
+처음에 만들어 두었던 가상환경폴더안으로 들어가서 가상환경에 진입을 한다.
+
+
+/ -- 3. 프로젝트폴더안에 본인이 만들 사이트의 폴더를 만든다. /
+
+Ex)
+  (mysite) C:\projects>mkdir mysite
+
+이제 이 projects 폴더 안에 mysite라는 폴더를 만들고 여기서 장고의 프로젝트를 만들어 보자
+
+
+/ -- 4. 나의 프로젝트를 만든다. /
+
+Ex)
+  (mysite) C:\projects\mysite>django-admin startproject config .
+
+django-admin startproject config .
+
+django 장고프로그램에서 / -admin 초기 고정 이름(변경불가) / startproject 프로젝트 시작명령어 / config . config라는 이름의 폴더안에 생성하겠다
+
+여기서 config '.' 점이 붙는 이유는 
+
+projects/mysite 해당폴더안에 만들겠다는 의미이다
+
+'.'이 없으면 mysite/mysite와 같은 형태로 이루어 진다.
+

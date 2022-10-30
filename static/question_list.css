@@ -1,0 +1,10 @@
+.subject {
+  text-decoration-line: none;
+  color : white;
+  
+}
+
+.subject:hover {
+  color : gray;
+  text-decoration-line: none;
+}

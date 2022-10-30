@@ -1,0 +1,110 @@
+/ URL 별칭 /
+
+1. URL 하드코딩
+2. URL 별칭
+3. 템플릿에서 URL 별칭사용하기
+4. URL 네임스페이스
+
+
+
+/ -- 1 . URL 하드코딩 /
+
+
+"templates/question_list.html"
+
+Ex)
+  <li><a href="/pybo/{{ question.id }}/">{{ question.subject }}</a></li>
+
+URL 구조가 자주 변경되는 실제 프로젝트에서는 이런 하드코딩된 URL은 변경될 가능성이 높다. 그래서 자주 변경해줘야 한다면 해당 URL에 대한 실제 링크 대신 링크의 주소가 1:1 매핑되어 있는 별칭을 사용하는게 효과적이다.
+
+
+"pybo/urls.py"
+
+Ex)
+  from django.urls import path
+
+  from . import views
+
+  urlpatterns = [
+      path('', views.index, name='index'),
+      path('<int:question_id>/', views.detail, name='detail'),
+  ]
+
+"http://localhost:8000/pybo/" URL은 "index", "http://localhost:8000/pybo/2와" 같은 URL에는 "detail" 이라는 별칭을 부여 했다.
+
+
+별칭을 부여했으면 다음과 같이 사용할 수 있다.
+
+"templates/pybo/question_list.html"
+
+Ex)
+  {% if question_list %}
+      <ul>
+      {% for question in question_list %}
+          <li><a href="{% url 'detail' question.id %}">{{ question.subject }}</a></li>
+      {% endfor %}
+      </ul>
+  {% else %}
+      <p>질문이 없습니다.</p>
+  {% endif %}
+
+
+"href="{% url 'detail' question.id %}">"
+
+하드코딩 되어 있던 /pybo/{{question.id}} 링크를 {% url 'detail' question.id %} 로 변경했다. 여러기서 question.id 는 URL 매핑에 정의된 <Int:question_id> 에 전달해야 하는 값을 의미한다.
+
+/ 피라미터 전달
+
+한개의 피라미터를 전달할 경우
+
+{% url 'detail' question.id %}
+
+이 때 다음처럼 피라미터 명을 함께 사용할 수 있다.
+
+{% url 'detail' question_id=question.id %}
+
+만약 2개 이상의 피라미터를 사용해야 한다면 다음과 같이 공백 문자 이후에 덧 붙여주면 된다.
+
+{% url 'detail' question_id=question.id page=2 %}
+
+
+
+/ -- 2 . 네임스페이스 /
+
+현재 pybo 앱 하나만 사용중이지만 pybo 앱 이외의 다른 앱이 프로젝트안에 추가 될 수도 있다. 이런 경우 다른 앱에서 동일한 URL 별칭을 사용하면 중복이 발생할 것이다.
+
+이 문제를 해결하려면 pybo/urls.py 파일에 네임스페이스를 의미하는 app_name 변수를 지정해야한다. 
+
+"pybo/urls.py"
+
+Ex)
+from django.urls import path
+
+from . import views
+
+app_name = 'pybo'
+
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('<int:question_id>/', views.detail, name='detail'),
+]
+
+
+"app_name = 'pybo'" 로 설정하였다. 그런데 이렇게 수정하고 pybo 페이지를 요청하면 "NoReverseMatch"오류가 발생한다.
+
+이 오류는 네임스페이스를 추가했기 때문에 발생한 오류이다. 이 오류를 해결하려면 템플릿에서 사용한 URL 별칭에 네임스페이스를 다음과 같이 지정해야 한다.
+
+
+'pybo/question_list.html'
+
+Ex)
+  {% if question_list %}
+      <ul>
+      {% for question in question_list %}
+          <li><a href="{% url 'pybo:detail' question.id %}">{{ question.subject }}</a></li>
+      {% endfor %}
+      </ul>
+  {% else %}
+      <p>질문이 없습니다.</p>
+  {% endif %}
+

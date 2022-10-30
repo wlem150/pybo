@@ -1,0 +1,291 @@
+/ 추천 /
+
+질문과 답변에 "추천(좋아요)" 기능을 추가해 보자
+
+1. 모델변경
+2. 질문 추천
+3. 답변 추천
+
+/ -- 1. 모델 변경 /
+
+우선 Question 모델에 추천인(voter) 속성을 추가해 보자.
+
+하나의 질문에 여러명이 추천할 수 있고 한 명이 여러 개의 질문에 추천할 수 있으므로 이런 경우에는 "다대다(N:N)" 관계를 의미하는 "ManyToManyField"를 사용해야 한다.
+
+"pybo.modesl.py"
+
+Ex)
+...
+class Question(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=200)
+    content = models.TextField()
+    create_date = models.DateTimeField()
+    modify_date = models.DateTimeField(null=True, blank=True)
+    voter = models.ManyToManyField(User)  # 추천인 추가
+
+    def __str__(self):
+        return self.subject
+    ...
+
+
+voter = models.ManyToManyField(User) 처럼 추천인(voter)을 ManyToManyField 관계로 추가했다. 그런데 이렇게 수정하고 makemigrations 명령을 실행하면 다음과 같은 오류가 발생한다.
+
+Ex)
+(mysite) c:\projects\mysite>python manage.py makemigrations
+SystemCheckError: System check identified some issues:
+
+ERRORS:
+pybo.Question.author: (fields.E304) Reverse accessor for 'pybo.Question.author' clashes with reverse accessor for 'pybo.Question.voter'.
+        HINT: Add or change a related_name argument to the definition for 'pybo.Question.author' or 'pybo.Question.voter'.
+pybo.Question.voter: (fields.E304) Reverse accessor for 'pybo.Question.voter' clashes with reverse accessor for 'pybo.Question.author'.
+        HINT: Add or change a related_name argument to the definition for 'pybo.Question.voter' or 'pybo.Question.author'.
+
+(mysite) c:\projects\mysite>
+
+오류의 내용은 Question 모델에서 사용한 author와 voter가 모두 User 모델과 연결되어 있기 때문에 User.question_set 처럼 User 모델을 통해서 Question 데이터에 접근하려고 할 때 author를 기준으로 할지 voter를 기준으로 해야 할지 명확하지 않다는 오류이다.
+
+이 문제는 위 오류의 HINT에서도 알 수 있듯이 related_name 인수를 추가하여 해결할 수 있다. 다음처럼 Question 모델을 변경해 보자.
+
+
+"pybo/models.py"
+
+Ex)
+class Question(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='author_question')
+    subject = models.CharField(max_length=200)
+    content = models.TextField()
+    create_date = models.DateTimeField()
+    modify_date = models.DateTimeField(null=True, blank=True)
+    voter = models.ManyToManyField(User, related_name='voter_question')
+
+    def __str__(self):
+        return self.subject
+
+author에는 related_name='author_question' 라는 인수를 지정하고 voter에는 related_name='voter_question' 라는 인수를 지정했다. 이렇게 하면 이제 특정 사용자가 작성한 질문을 얻기 위해서는 some_user.author_question.all() 처럼 사용할 수 있다. 마찬가지로 특정 사용자가 추천한 질문을 얻기 위해서는 some_user.voter_question.all() 처럼 사용할 수 있다.
+
+some_user는 특정 사용자를 의미한다.
+
+이제 마찬가지 방법으로 Answer모델에도 추천인(voter) 속성을 다음처럼 추가하도록 하자.
+
+"pybo.modesl.py"
+
+Ex)
+class Answer(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='author_answer')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    content = models.TextField()
+    create_date = models.DateTimeField()
+    modify_date = models.DateTimeField(null=True, blank=True)
+    voter = models.ManyToManyField(User, related_name='voter_answer')
+
+Answer 모델에도 author와 voter속성에 related_name 인수를 추가했다.
+
+이제 makemigrations 명령과 migrate 명령을 실행하자.
+
+
+
+
+/ -- 2. 질문 추천 /
+
+Question 모델에 추천인 속성을 추가 했으니 이제 질문 추천 기능을 만들어 보자.
+
+질문을 추천할 수 있는 버튼의 위치는 어디가 좋을까? 그렇다. 질문 상세 화면이다. 질문 상세 템플릿을 다음과 같이 수정하자.
+
+"templates/pybo/question_detail.html"
+
+
+Ex)
+<!-- 질문 -->
+<h2 class="border-bottom py-2">{{ question.subject }}</h2>
+<div class="card my-3">
+    <div class="card-body">
+        (... 생략 ...)
+        <div class="my-3">
+            <a href="javascript:void(0)" data-uri="{% url 'pybo:question_vote' question.id  %}"
+               class="recommend btn btn-sm btn-outline-secondary"> 추천
+                <span class="badge rounded-pill bg-success">{{question.voter.count}}</span>
+            </a>
+            {% if request.user == question.author %}
+            <a href="{% url 'pybo:question_modify' question.id  %}"
+               class="btn btn-sm btn-outline-secondary">수정</a>
+            <a href="javascript:void(0)" class="delete btn btn-sm btn-outline-secondary"
+               data-uri="{% url 'pybo:question_delete' question.id  %}">삭제</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+<a href="javascript:void(0)" data-uri="{% url 'pybo:question_vote' question.id  %}"
+               class="recommend btn btn-sm btn-outline-secondary"> 추천
+                <span class="badge rounded-pill bg-success">{{question.voter.count}}</span>
+            </a>
+
+이 부분을 추가하면 된다.
+
+질문의 추천 버튼을 질문의 수정 버튼 좌측에 추가했다. 그리고 버튼에는 추천수도 함께 보이도록 했다. 추천 버튼을 클릭하면 href의 속성이 javascript:void(0)으로 되어 있기 때문에 아무런 동작도 하지 않는다. 하지만 class 속성에 "recommend"를 추가하여 자바스크립로 data-uri에 정의된 URL이 호출되게 할 것이다. 이와 같은 방법을 사용하는 이유는 "추천" 버튼을 눌렀을때 확인창을 통해 "사용자의 확인을 구하기 위함"이다.
+
+
+/ 2.1 추천 버튼 확인 창 /
+
+이어서 <추천> 버튼을 클릭했을 때 '정말로 추천하시겠습니까?'라는 확인 창이 나타나야 하므로 다음 코드를 추가하자.
+
+"templates/pybo/question_detail.html"
+
+Ex)
+{% block script %}
+<script type='text/javascript'>
+const delete_elements = document.getElementsByClassName("delete");
+Array.from(delete_elements).forEach(function(element) {
+    element.addEventListener('click', function() {
+        if(confirm("정말로 삭제하시겠습니까?")) {
+            location.href = this.dataset.uri;
+        };
+    });
+});
+const recommend_elements = document.getElementsByClassName("recommend");
+Array.from(recommend_elements).forEach(function(element) {
+    element.addEventListener('click', function() {
+        if(confirm("정말로 추천하시겠습니까?")) {
+            location.href = this.dataset.uri;
+        };
+    });
+});
+</script>
+
+이 부분이 새로 추가된 부분이다.
+
+const recommend_elements = document.getElementsByClassName("recommend");
+Array.from(recommend_elements).forEach(function(element) {
+    element.addEventListener('click', function() {
+        if(confirm("정말로 추천하시겠습니까?")) {
+            location.href = this.dataset.uri;
+        };
+    });
+});
+
+
+추천 버튼에 class="recommend"가 적용되어 있으므로 추천 버튼을 클릭하면 "정말로 추천하시겠습니까?"라는 질문이 나타나고 "확인"을 선택하면 data-uri 속성에 정의한 URL이 호출될 것이다.
+
+
+
+/ 2.2 질문 추천 urls.py /
+
+위에서 {% url 'pybo:question_vote' question.id %} URL이 추가되었으므로 pybo/urls.py에 다음처럼 URL 매핑 규칙을 추가해야 한다.
+
+"pybo/urls.py"
+
+Ex)
+urlpatterns = [
+    (... 생략 ...)
+    path('question/vote/<int:question_id>/', question_views.question_vote, name='question_vote'),
+]
+
+
+
+/ 2.3 질문 추천 views.py /
+
+그리고 URL매핑에 의해 실행되는 question_vote 함수는 다음과 같이 작성하자.
+
+"pybo/views/question_views.py"
+
+Ex)
+@login_required(login_url='common:login')
+def question_vote(request, question_id):
+    question = get_object_or_404(Question, pk=question_id)
+    if request.user == question.author:
+        messages.error(request, '본인이 작성한 글은 추천할수 없습니다')
+    else:
+        question.voter.add(request.user)
+    return redirect('pybo:detail', question_id=question.id)
+
+본인 추천을 방지하기 위해 로그인한 사용자와 추천하려는 질문의 글쓴이가 동일할 경우에는 추천할수 없게 하였다. 그리고 Question 모델의 voter는 여러사람을 추가할 수 있는 ManyToManyField이므로 question.voter.add(request.user) 처럼 add 함수를 사용하여 추천인을 추가한다.
+
+동일한 사용자가 동일한 질문을 여러번 추천하더라도 추천수가 증가하지는 않는다. 동일한 사용자를 add 할 경우에 오류가 발생할것 같지만 오류는 발생하지 않는다. 오류도 발생하지 않고 추가되지도 않는다. 이는 ManyToManyField 내부에서 자체적으로 처리된다.
+
+/ 2.4 질문 추천 확인 /
+
+질문 상세 화면의 본문 왼쪽을 보면 <추천> 버튼이 생겼을 것이다. 버튼이 잘 작동하는지 확인하자.
+
+
+
+
+
+/ -- 3. 답변 추천 /
+
+답변 추천 기능은 질문 추천 기능과 동일하므로 빠르게 작성해 보자.
+
+
+/ 3.1 답변 추천 버튼 /
+
+답변의 추천수를 표시하고, 답변을 추천할 수있는 버튼을 질문 상세 템플릿에 다음과 같이 추가하자.
+
+"templates/pybo/question_detail.html"
+
+Ex)
+(... 생략 ...)
+<!-- 답변 -->
+<h5 class="border-bottom my-3 py-2">{{question.answer_set.count}}개의 답변이 있습니다.</h5>
+{% for answer in question.answer_set.all %}
+<div class="card my-3">
+    <div class="card-body">
+        <div class="card-text" style="white-space: pre-line;">{{ answer.content }}</div>
+        <div class="d-flex justify-content-end">
+            (... 생략 ...)
+        </div>
+        <div class="my-3">
+            <a href="javascript:void(0)" data-uri="{% url 'pybo:answer_vote' answer.id  %}"
+               class="recommend btn btn-sm btn-outline-secondary"> 추천
+                <span class="badge rounded-pill bg-success">{{answer.voter.count}}</span>
+            </a>
+            {% if request.user == answer.author %}
+            <a href="{% url 'pybo:answer_modify' answer.id  %}"
+               class="btn btn-sm btn-outline-secondary">수정</a>
+            <a href="javascript:void(0)" class="delete btn btn-sm btn-outline-secondary "
+               data-uri="{% url 'pybo:answer_delete' answer.id  %}">삭제</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+(... 생략 ...)
+
+이 부분을 추가하면 된다.
+
+<a href="javascript:void(0)" data-uri="{% url 'pybo:answer_vote' answer.id  %}"
+               class="recommend btn btn-sm btn-outline-secondary"> 추천
+                <span class="badge rounded-pill bg-success">{{answer.voter.count}}</span>
+            </a>
+
+
+
+/ 3.2 답변 추천 urls.py /
+
+위에서 {% url 'pybo:answer_vote' answer.id %}이 추가되었으므로 pybo/urls.py에 다음처럼 URL 매핑 규칙을 추가해야 한다.
+
+"mysite/pybo/urls.py"
+
+Ex)
+    urlpatterns = [
+        (... 생략 ...)
+        path('answer/vote/<int:answer_id>/', answer_views.answer_vote, name='answer_vote'),
+    ]
+
+
+
+/ 3.3 답변 추천 views.py /
+
+"pybo/views/answer_views.py"
+
+Ex)
+@login_required(login_url='common:login')
+def answer_vote(request, answer_id):
+    answer = get_object_or_404(Answer, pk=answer_id)
+    if request.user == answer.author:
+        messages.error(request, '본인이 작성한 글은 추천할수 없습니다')
+    else:
+        answer.voter.add(request.user)
+    return redirect('pybo:detail', question_id=answer.question.id)
+
+

@@ -1,0 +1,31 @@
+/ 02_가상환경에서 장고설치하기 /
+
+가상환경에서 장고를 설치해보자 
+
+
+/ 사용법 or 만드는 법 /
+
+이제 명령프롬프트를 열어서 가상환경에 장고를 설치하자
+
+-- pip install django==version
+
+Ex) 
+    C:\venvs\mysite\Scripts> activate
+    (mysite) C:\venvs\mysite\Scripts>pip install django==4.0.3
+
+pip은 Package Insaller for Python의 약자이다.
+파이썬을 설치하고 나서 명령프롬프트에서 실행할 수 있다.
+
+pip (파이썬 패키지에서) / install (설치한다.) / django==4.0.3 (장고 4.0.3버전을 설치한다.)
+
+django==version을 활용해서 원하는 버전을 다운로드 받을 수 있다.
+
+
+-- python.exe -m pip install --upgrade pip
+Ex) 
+    (mysite) c:\venvs2\mysite\Scripts>python.exe -m pip install --upgrade pip
+
+
+pip가 최신버전이 아니라면 위와 같은 명령어를 입력해서 최신버전으로 업그레이드 하자
+
+

@@ -1,0 +1,45 @@
+/ 답변 개수 표시 /
+
+질문에 달린 답변 개수를 표시할 수 있는 기능을 추가해 보자
+
+"templates/pybo/question_list.html"
+
+Ex)
+<tbody>
+    {% if question_list %}
+    {% for question in question_list %}
+    <tr class="table-dark">
+      <td> {{ question_list.paginator.count|sub:question_list.start_index|sub:forloop.counter0|add:1 }}</td>
+      <td>
+        <a href="{% url 'pybo:detail' question.id %}">{{ question.subject }}</a>
+        {% if question.answer_set.count > 0 %}
+        <span class="text-danger small mx-2">{{ question.answer_set.count }}</span>
+        {% endif %}
+      </td>
+      <td>{{ question.create_date }}</td>
+    </tr>
+    {% endfor %}
+    {% else %}
+    
+    {% endif %}
+  </tbody>
+
+{% if question.answer_set.count > 0 %}
+        <span class="text-danger small mx-2">{{ question.answer_set.count }}</span>
+        {% endif %}
+
+
+
+
+ {% for question in question_list %} 
+ 
+ 이 문장에 따라서 question_list 에 있는 값들이 하나씩 question 에 들어가게 된다. 그 question 에 있는 값들이 하나씩 차례대로 
+ 
+ 
+ {% if question.answer_set.count > 0 %} 
+ 
+ 에 들어가서 하나의 question 에 대한 answer 가 몇개나 있는지 찾아서 0보다 크다면, 
+ 
+ <span class="text-danger small mx-2">{{ question.answer_set.count }}</span> 
+ 
+ 이 문장이 실행되게 된다.
