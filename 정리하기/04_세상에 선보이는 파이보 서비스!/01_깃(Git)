@@ -172,9 +172,34 @@ Ex)
 
   no changes added to commit (use "git add" and/or "git commit -a")
 
+그러면 '변경 내역이 저장되지 않았다'는 메시지와 함께 git add 명령 또는 git commit -a 명령을 수행하라는 메시지가 나타난다. 만약 변경 내역을 커밋하고 싶다면 git add 명령을 진행하고 git commit 명령을 수행하거나 git commit 명령에 -a 옵션을 추가해야 한다. -a 옵션은 커밋할 때 add 명령도 함께 처리하라는 옵션이다.
+
+
+다음처럼 -a 옵션을 추가하여 변경 내역을 적용하자.
+
+Ex)
+  (mysite) c:\projects\mysite>git commit -a -m "타이틀 변경"
+  [main ef65d4c] 타이틀 변경
+  1 file changed, 1 insertion(+), 1 deletion(-)
 
 
 
+/ 2.8 git log /
 
+깃으로 커밋한 이력을 확인하려면 git log 명령을 입력하면 된다.
+
+Ex)
+  PS C:\Myprojects\mysite> git log
+  commit 8ddb83020197f72a7993da137da983b37c1be54f (HEAD -> master)
+  Author: wlem150 <wlem150@naver.com>
+  Date:   Sun Oct 30 18:17:06 2022 +0900
+
+      타이틀 변경
+
+  commit 4cbac0d71f3c09d6e63d9f51383d1fb40fde5f92
+  Author: wlem150 <wlem150@naver.com>
+  Date:   Sun Oct 30 18:02:36 2022 +0900
+
+      나의 첫 프로젝트 커밋
 
 
